@@ -1,0 +1,6 @@
+*.npy
+*.pkl
+*.png
+*.pyc
+*.eps
+logs/
