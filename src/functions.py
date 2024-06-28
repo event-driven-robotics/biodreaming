@@ -7,6 +7,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
+from air_hockey_challenge.utils import inverse_kinematics, world_to_robot
+from air_hockey_challenge.framework.air_hockey_challenge_wrapper import AirHockeyChallengeWrapper
+from examples.control.hitting_agent import build_agent
+from air_hockey_challenge.framework.challenge_core import ChallengeCore
+from examples.control.defending_agent import DefendingAgent
 
 def action2cat(action, n_actions = 3):
     # Here we reduce the action space from 6D to 3D thanks to the reduction
@@ -31,10 +36,60 @@ def act2cat(act):
 
     return dicmap[act]
 
-def cat2act(cat):
+def cat2act_pong(cat):
     dicmap = {0 : 0, 1 : 2, 2 : 3}
 
     return dicmap[cat]
+
+
+def computeJointValues(robot, ee_pos_des, joint_pos_current):
+        
+     # ee_pos_des must be in the robot reference frame
+    success, joint_pos_des = inverse_kinematics(robot.robot_model, robot.robot_data,
+                                                    ee_pos_des, initial_q=joint_pos_current)
+    return joint_pos_des
+
+
+def define_actions(home_ee, home_joint, init_obs, robot):
+      
+        pos0 = get_dummy_action_airhockey(robot, init_obs)[0]
+        pos1 = [1.2, 0, home_ee[2]]
+        pos2 = [1, 0.1, home_ee[2]]
+        pos3 = [1, 0.3, home_ee[2]]
+        pos4= [1, -0.3, home_ee[2]]
+        # delta = 0.05
+        # curr_pos=self.get_joint_pos(obs)
+        # goRight = curr_pos + [0, -delta, 0]
+        # goLeft = curr_pos + [0, delta, 0]
+        # goForw = curr_pos + [delta, 0, 0]
+        # goBack = curr_pos + [-delta, 0, 0]
+        
+        # pos_actions_list=[goRight, goLeft, goForw, goBack]
+        pos_actions_list = [pos0, pos1]
+
+        actions2joints = []
+        home_joint_pos= home_joint[0]
+        for pos in pos_actions_list:
+            actions2joints.append(computeJointValues(robot, pos, home_joint_pos))
+
+        return actions2joints
+    
+def cat2act_airhockey(cat, init_obs, robot, frame):
+    # jointValues=np.zeros(3,)
+  
+    action=np.zeros((2,3))
+    home_ee=init_obs[6:9]
+    home_joint_pos=get_dummy_action_airhockey(robot, init_obs)
+    jointValues = define_actions(home_ee, home_joint_pos, init_obs, robot)
+    
+    jointsOfAction = jointValues[cat]
+    joint_pos_des = np.array([jointsOfAction[0], jointsOfAction[1], jointsOfAction[2]])
+    joint_vel_des = np.array([0.35, 0.35, 0.35])
+        
+    return np.vstack((joint_pos_des, joint_vel_des))
+        
+
+    
 
 def save_frames_as_gif(frames, path= "", filename='gym_animation_12.gif'):
 
@@ -81,7 +136,7 @@ def test_policy():
 
     return RTOT
 
-def import_ram(ram_all):
+def import_ram_pong(ram_all):
     ram = np.zeros((4,))
     ram[0] = int(ram_all[49])
     ram[1] = int(ram_all[50])
@@ -89,6 +144,27 @@ def import_ram(ram_all):
     ram[3] = int(ram_all[54])
     return ram
 
+def import_ram_airhockey(ram_all):
+    ram = np.zeros(6, )
+    ram[0]=ram_all[0]
+    ram[1]= ram_all[1]
+    ram[2]= ram_all[3]
+    ram[3]=ram_all[4]
+    ram[4]=ram_all[6]
+    ram[5]=ram_all[7]
+    return ram
+
+def get_dummy_action_pong():
+    return 0
+
+def get_dummy_action_airhockey(robot, ram):
+    
+    home_ee = robot.get_ee_pose(ram)
+    home_joint_pos = robot.get_joint_pos(ram)
+    joint_vel_des = np.array([0, 0, 0])
+        
+    return np.vstack((home_joint_pos, joint_vel_des))
+    
 def plot_rewards (REWARDS,REWARDS_MEAN,S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = 'figure.png'):
 
     plt.figure(figsize=( 18, 18 ) )

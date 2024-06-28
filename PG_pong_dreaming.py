@@ -9,23 +9,28 @@ import gym
 import os.path
 import numpy as np
 import matplotlib.pyplot as plt
-
+from datetime import datetime
 from tqdm import trange
 from argparse import ArgumentParser
-from functions import cat2act, plot_rewards, plot_dram
-from functions import import_ram, plot_planning
-
+from src.functions import plot_rewards, plot_dram
+from src.functions import plot_planning
 from src.optimizer import Adam
-
+from src.agent import AGEMO
+from air_hockey_challenge.framework.air_hockey_challenge_wrapper import AirHockeyChallengeWrapper
+from examples.control.hitting_agent import build_agent
+from air_hockey_challenge.framework.challenge_core import ChallengeCore
+from examples.control.defending_agent import DefendingAgent
 #if_dream = 0
 
 parser = ArgumentParser()
-parser.add_argument('-if_dream', required = False,  type = int, dest = 'if_dream', help = 'to dream or not to dream',default = 0)
+parser.add_argument('-if_dream', required = False,  type = int, dest = 'if_dream', help = 'to dream or not to dream', default = 0)
+parser.add_argument('--env', required=False,  type = str, dest = 'env', help = 'Environment to use. Options: \'pong\', \'airhockey\'. Default: \'airhockey\'', default = 'airhockey')
 par_inp = vars(parser.parse_args())
 
 if_dream = par_inp['if_dream']
-
-folder = "results_0"
+current_time = datetime.now()
+folder_name = current_time.strftime("RUN %d-%m_%H-%M-%S")
+folder = folder_name
 
 start_learn = 1*50
 
@@ -38,18 +43,65 @@ if not isExist:
 
 act_factor = 5.
 
+
+def agent_spike_printer(spike_train):
+    
+    indices = np.arange(len(spike_train))
+    values = spike_train.astype(int)
+    plt.figure(figsize=(10, 4))
+    plt.scatter(indices, values, color='blue')
+    plt.xlabel('Indice')
+    plt.ylabel('Valore')
+    plt.title('Agent spikes')
+    plt.ylim(-0.1, 1.1)
+    plt.savefig('agent.png')
+    
+def planner_spike_printer(spike_train):
+    
+    indices = np.arange(len(spike_train))
+    values = spike_train.astype(int)
+    plt.figure(figsize=(10, 4))
+    plt.scatter(indices, values, color='red')
+    plt.xlabel('Indice')
+    plt.ylabel('Valore')
+    plt.title('Planner spikes')
+    plt.ylim(-0.1, 1.1)
+    plt.savefig('planner.png')
+
+def env_step(env, action):
+    try:
+        ram_all, r, done, _, _ = env.step (action) 
+        
+    except ValueError:
+        ram_all, r, done, _ = env.step (action) 
+    # print(env.base_env.get_joints(ram_all))      
+    ram = import_ram(ram_all)
+    return ram, r, done
+
 for repetitions in range(10):
 
-    N_ITER = 50*40
+    N_ITER =   50*40                                 #50*40
     TIMETOT = 100
 
-    env = gym.make('Pong-ramDeterministic-v0', difficulty = 0)
+    if par_inp['env'] == 'pong':
+        env = gym.make('Pong-ramDeterministic-v4', difficulty = 0, render_mode="human")
+        from src.functions import import_ram_pong as import_ram
+        from src.functions import get_dummy_action_pong as get_dummy_action
+        from src.functions import cat2act_pong as cat2act
+        from src.config import PONG_V4_PAR_I4 as par
+    elif par_inp['env'] == 'airhockey':
+        env = AirHockeyChallengeWrapper(env="3dof-defend", interpolation_order=3, debug=True)
+        from src.functions import import_ram_airhockey as import_ram
+        from src.functions import get_dummy_action_airhockey as get_dummy_action
+        from src.functions import cat2act_airhockey as cat2act
+        from src.config import AIRHOCKEY as par
+    else:
+        raise AttributeError(f'The value {par_inp["env"]} is not a valid option for the environment')
+        
+    
+    # print (f'Pong: Observation space: {env.observation_space}')
+    # print (f'Pong: Action Meaning: {env.unwrapped.get_action_meanings()}')
 
-    print (f'Pong: Observation space: {env.observation_space}')
-    print (f'Pong: Action Meaning: {env.unwrapped.get_action_meanings()}')
-
-    from agent import AGEMO
-    from config import PONG_V4_PAR_I4 as par
 
     plt.rcParams.update({'font.size': 14})
 
@@ -57,30 +109,33 @@ for repetitions in range(10):
                  'epochs_out' : par['epochs_out'],
                  'clump'   : par['clump'], 'feedback'  : par['feedback'],
                  'verbose' : par['verbose'], 'rank' : par['rank']}
-    par["I"]= 4
+    
+    par["I"] = 6
 
     agent = AGEMO(par)
-
-    par["I"]= 3+4
-    par["O"]= 3
-
-    par["tau_ro"] = 2.*par["dt"]#OCCHIO era 2.*
-    planner = AGEMO(par)
+    
+    par["I"] = 8    #par['O'] + par['I'] #TODO: input del planner, il modello prende come input stato (4) e azione (3) e da' come output next state e rew
+    
+    par["tau_ro"] = 2.*par["dt"]
+    planner = AGEMO(par) #TODO:planner=rete modello, agent=interazione con environment
 
     alpha_rout = agent.par['alpha_rout']
 
-    plt.figure()
+    plt.figure() 
 
     # Erase both the Jrec and the Jout
     agent.forget()
     # Reset agent internal variables
     agent.reset()
-
+    
+    robot=DefendingAgent(env.base_env.env_info)
+    # robot.reset()
+    
     count = -1
-    agent.Jout = np.random.normal(0,.1,size=(agent.O,agent.N))
-    agent.J = np.random.normal(0,1./np.sqrt(agent.N),size=(agent.N,agent.N))#*=0
+    agent.Jout = np.random.normal(0,.1,size=(agent.O,agent.N)) 
+    agent.J = np.random.normal(0,1./np.sqrt(agent.N),size=(agent.N,agent.N))#*=0    #TODO: J pesi ricorrenti (se messi a 0 diventa un layer tradizionale di una rete feedforward), Jout output
 
-    agent.adam_rec = Adam (alpha = 0.001, drop = .99, drop_time = 10000)
+    agent.adam_rec = Adam (alpha = 0.001, drop = .99, drop_time = 10000) #TODO: Adam viene creato per ogni set di parametri, serve per ottenere i gradienti e fare gli step
     agent.adam_out = Adam (alpha = 0.001, drop = .99, drop_time = 10000)
 
     eta_factor_r = 0.2
@@ -88,14 +143,14 @@ for repetitions in range(10):
     planner.adam_out_r = Adam (alpha = 0.002*eta_factor_r, drop = .99, drop_time = 10000) #0.005
     planner.adam_rec = Adam (alpha = 0.004, drop = .99, drop_time = 10000)
 
-    planner.Jout =np.random.normal(0,.1,size=(agent.O,agent.N))
+    planner.Jout = np.random.normal(0,.1,size=(agent.O,agent.N))
     planner.J = np.random.normal(0,1./np.sqrt(agent.N),size=(agent.N,agent.N))#*=0
-    planner.Jout_s_pred = np.zeros((agent.I,agent.N))
-    planner.Jout_r_pred = np.zeros((1,agent.N))
+    planner.Jout_s_pred = np.zeros((agent.I,agent.N)) #readout del planner planner.I= stato, planner.N = taglia della rete
+    planner.Jout_r_pred = np.zeros((1,agent.N)) 
 
     planner.dJ_aggregate = 0
-    planner.dJout_s_aggregate = 0
-    planner.dJout_r_aggregate = 0
+    planner.dJout_s_aggregate = 0 
+    planner.dJout_r_aggregate = 0 
 
     REWARDS = []
     REWARDS_MEAN = []
@@ -115,11 +170,12 @@ for repetitions in range(10):
     agent.dJout_aggregate=0
     planner.state = 0
 
-    for iteration in trange(N_ITER):
+    for iteration in trange(N_ITER): #TODO: N_ITER=2000, numero di partite che durano 100 step 
 
-        env.reset()
+        initial_obs=env.reset() #initial obs is a 12 dimensional obj with puck and EE initial pos and vel 
         agent.reset()
         planner.reset()
+        
 
         S_planner = []
         S_agent = []
@@ -134,7 +190,7 @@ for repetitions in range(10):
 
         PLANNER_STATES = []
 
-        agent.dH = np.zeros (agent.N)
+        agent.dH = np.zeros (agent.N) #TODO: traccia pre sinaptica per il calcolo del gradiente
         planner.dH = np.zeros (agent.N)
 
         RTOT = 0
@@ -142,32 +198,38 @@ for repetitions in range(10):
 
         agent.dJfilt =0
         agent.dJfilt_out = 0
-        ram_all, r, done, _ = env.step (0)
-        ram = np.zeros((4,))
-        ram = import_ram(ram_all)
+        
+        home_ee = robot.get_ee_pose(initial_obs)
+        home_joint_pos = robot.get_joint_pos(initial_obs)
+        
+        ram, r, done = env_step(env, get_dummy_action(robot, initial_obs))
+    
         ram_old = ram
+    
 
 
-        ######### AWAKE PHASE ##########
 
-        for skip in range(20):
-            act_vec = np.zeros((3,))
-            act_vec = act_vec*0
-            act_vec[0]=1
+        ######### AWAKE PHASE ########## during the awale phase the TWO networks interact with the environment
 
-            _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) )
-            ds_pred,r_pred = planner.prediction()
+        for skip in range(20): #was 20
+            act_vec = np.zeros((par['O'],))
+            act_vec = act_vec*0  #TODO: forcing the agent not to act for 20 steps?
+            act_vec[0]=1 #TODO: why having a vector of 0s and then add 1?
+            
+            # env.render()
+            _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) )  #TODO: act_vec*act_factor ? why performing this product?
+            
+            
+            #2.2 Learning the world model
+            ds_pred,r_pred = planner.prediction() #TODO: predicted state variation and the reward? prediction:paddles (y, yopponent) and ball coordinates?
+            planner.state = ds_pred + ram 
 
-            planner.state = ds_pred + ram
-
-            S_planner.append(planner.S[:])
+            S_planner.append(planner.S[:]) #.S spikes train
             S_agent.append(agent.S[:])
 
-            ram_all, r, done, _ = env.step (0)
-
             ram_old = ram
-            ram = np.zeros((4,))
-            ram = import_ram(ram_all)
+            
+            ram, r, done = env_step(env, get_dummy_action(robot, initial_obs))
 
             PLANNER_STATES.append( planner.state_out )
             RAM_PRED.append( planner.state )
@@ -178,8 +240,8 @@ for repetitions in range(10):
             dram = ram - ram_old
             dram[np.abs(dram)>30]=0.
 
-            planner.learn_model(ds_pred,r_pred,dram,r)
-            planner.model_update()
+            planner.learn_model(ds_pred,r_pred,dram,r)  #TODO: dreaming network learning the model 
+            planner.model_update() #TODO: agent.py @550
 
             DRAM.append(dram)
             DRAM_PRED.append(ds_pred)
@@ -196,31 +258,39 @@ for repetitions in range(10):
 
             frame += 1
             ram_old = ram
+            
+            # env.render()
 
-            action, out = agent.step_det(ram/255)
+            action, out = agent.step_det(ram/255) 
             act_vec = np.copy(out)
 
             act_vec = act_vec*0
             act_vec[action]=1
 
-            _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) )
+            _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) ) #TODO: why does the step of the planner needs two inputs ?
             ds_pred,r_pred = planner.prediction()
 
             PLANNER_STATES.append( planner.state_out )
 
             S_planner.append(planner.S[:])
             S_agent.append(agent.S[:])
+            
+            planner_spikes = planner.S[:]
+            agent_spikes = agent.S[:]
+            
+            planner_spike_printer(planner_spikes)
+            agent_spike_printer(agent_spikes)
 
-            ram_all, r, done, _ = env.step ([cat2act(action)])
-
+            
+            # ram, r, done = env_step(env, get_dummy_action(robot, initial_obs))
+            ram, r, done = env_step(env, cat2act(action, initial_obs, robot, frame))
+            
             if_learn=0
-            if iteration > start_learn:
+            if iteration > start_learn: #TODO: why do I wait for learning?
                 if_learn=1
 
-            agent.learn_error(r*if_learn)
+            agent.learn_error(r*if_learn) 
 
-            ram = np.zeros((4,))
-            ram = import_ram(ram_all)
 
             entropy+=agent.entropy
 
@@ -245,6 +315,10 @@ for repetitions in range(10):
             DRAM_PRED.append(ds_pred)
             DRAM.append(dram)
 
+        try:
+            env.close()
+        except AttributeError:
+            pass
         REWARDS.append(RTOT)
         ENTROPY.append(entropy)
         ERROR_RAM.append(np.std(np.array(DRAM)-np.array(DRAM_PRED),axis=0))
@@ -280,13 +354,13 @@ for repetitions in range(10):
             agent.reset()
             planner.reset()
 
-            ram_all, r, done, _ = env.step (0)
+            ram_all, r, done, _, _ = env.step (0)
             ram = import_ram(ram_all)
             t_skip = 20
 
             for skip in range(t_skip):
 
-                ram_all, r, done, _ = env.step (0)
+                ram_all, r, done, _, _ = env.step (0)
                 RAM_PLAN.append(ram_all[[49, 50, 51, 54]])
 
                 act_vec = np.copy(out)

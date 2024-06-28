@@ -516,7 +516,7 @@ class AGEMO:
         ch = 2
 
         alpha_J = 0.002
-        ac_vector = np.zeros((3,))
+        ac_vector = np.zeros((self.O,))
         ac_vector[self.action] = 1
         dJ = np.outer (self.Jout.T@(ac_vector - self.out)*self._dsigm (self.H, dv = 1.), self.dH)
 
@@ -540,7 +540,7 @@ class AGEMO:
 
         # ! WHY TWO UPDATE OF J_OUT??
         self.Jout = self.adam_out.step (self.Jout, self.dJout_aggregate)
-        self.Jout = self.Jout + self.par["alpha_rout"]*self.dJout_aggregate
+        # self.Jout = self.Jout + self.par["alpha_rout"]*self.dJout_aggregate
 
         self.dJ_aggregate=0
         self.dJout_aggregate=0
@@ -607,7 +607,7 @@ class AGEMO:
         # Here we collect the relevant quantities to store
         data_bundle = (self.Jin, self.Jteach, self.Jout, self.J, self.par)
 
-        np.save (filename, np.array (data_bundle, dtype = np.object))
+        np.save (filename, np.array (data_bundle, dtype = np.object_))
 
     @classmethod
     def load (cls, filename):
