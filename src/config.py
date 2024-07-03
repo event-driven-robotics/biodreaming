@@ -237,14 +237,14 @@ Config = {
 }
 
 AIRHOCKEY = {'dt' : dt,
-       'tau_m' : 6 * dt,
+       'tau_m' : 6 * dt, 
        'tau_s' : 4 * dt,
        'tau_ro' : 1*dt,
        'tau_star' : dt,
 
     	'N' : 500, 'T' : 800, 'I' : 6, 'O' : 2,
 
-	'dv' : 0.05 , 'Vo' : -4, 'h' : -8, 's_inh' : 100,
+	'dv' : 0.05 , 'Vo' : -0.04, 'h' : -0.08, 's_inh' : 100,   #divided by 100 Vo and h
 
        'gamma' : .99,
        'lerp'  : 0.01,

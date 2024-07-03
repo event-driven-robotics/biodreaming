@@ -44,7 +44,7 @@ if not isExist:
 act_factor = 5.
 
 
-def agent_spike_printer(spike_train):
+def agent_spike_printer(spike_train, folder, iteration):
     
     indices = np.arange(len(spike_train))
     values = spike_train.astype(int)
@@ -54,9 +54,15 @@ def agent_spike_printer(spike_train):
     plt.ylabel('Valore')
     plt.title('Agent spikes')
     plt.ylim(-0.1, 1.1)
-    plt.savefig('agent.png')
+
+    filename = f"agent_{iteration}.png"
+    filepath = os.path.join(folder, filename)
     
-def planner_spike_printer(spike_train):
+
+    plt.savefig(filepath)
+    plt.close()
+    
+def planner_spike_printer(spike_train, folder, iteration):
     
     indices = np.arange(len(spike_train))
     values = spike_train.astype(int)
@@ -66,7 +72,13 @@ def planner_spike_printer(spike_train):
     plt.ylabel('Valore')
     plt.title('Planner spikes')
     plt.ylim(-0.1, 1.1)
-    plt.savefig('planner.png')
+    
+    filename = f"planner_{iteration}.png"
+    filepath = os.path.join(folder, filename)
+    
+
+    plt.savefig(filepath)
+    plt.close()
 
 def env_step(env, action):
     try:
@@ -211,12 +223,12 @@ for repetitions in range(10):
 
         ######### AWAKE PHASE ########## during the awale phase the TWO networks interact with the environment
 
-        for skip in range(20): #was 20
+        for skip in range(20): 
             act_vec = np.zeros((par['O'],))
             act_vec = act_vec*0  #TODO: forcing the agent not to act for 20 steps?
             act_vec[0]=1 #TODO: why having a vector of 0s and then add 1?
             
-            # env.render()
+            env.render()
             _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) )  #TODO: act_vec*act_factor ? why performing this product?
             
             
@@ -259,7 +271,7 @@ for repetitions in range(10):
             frame += 1
             ram_old = ram
             
-            # env.render()
+            env.render()
 
             action, out = agent.step_det(ram/255) 
             act_vec = np.copy(out)
@@ -278,8 +290,9 @@ for repetitions in range(10):
             planner_spikes = planner.S[:]
             agent_spikes = agent.S[:]
             
-            planner_spike_printer(planner_spikes)
-            agent_spike_printer(agent_spikes)
+            if iteration % 200 == 0:
+                planner_spike_printer(planner_spikes, folder, iteration)
+                agent_spike_printer(agent_spikes, folder, iteration)
 
             
             # ram, r, done = env_step(env, get_dummy_action(robot, initial_obs))
