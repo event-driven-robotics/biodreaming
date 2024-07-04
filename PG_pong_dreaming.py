@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from tqdm import trange
 from argparse import ArgumentParser
-from src.functions import plot_rewards, plot_dram
+from src.functions import plot_rewards, plot_dram, plot_dynamics
 from src.functions import plot_planning
 from src.optimizer import Adam
 from src.agent import AGEMO
@@ -21,6 +21,8 @@ from examples.control.hitting_agent import build_agent
 from air_hockey_challenge.framework.challenge_core import ChallengeCore
 from examples.control.defending_agent import DefendingAgent
 #if_dream = 0
+import threading
+from time import sleep, time
 
 parser = ArgumentParser()
 parser.add_argument('-if_dream', required = False,  type = int, dest = 'if_dream', help = 'to dream or not to dream', default = 0)
@@ -90,6 +92,8 @@ def env_step(env, action):
     ram = import_ram(ram_all)
     return ram, r, done
 
+        
+
 for repetitions in range(10):
 
     N_ITER =   50*40                                 #50*40
@@ -111,6 +115,19 @@ for repetitions in range(10):
         raise AttributeError(f'The value {par_inp["env"]} is not a valid option for the environment')
         
     
+    rendering = False
+
+    def render_thread():
+        while True:
+            if rendering:
+                now = time()
+                env.render()
+                sleep(0.03 % now)
+            else:
+                sleep(0.5)
+                
+    threading.Thread(target=render_thread).start()
+
     # print (f'Pong: Observation space: {env.observation_space}')
     # print (f'Pong: Action Meaning: {env.unwrapped.get_action_meanings()}')
 
@@ -183,6 +200,7 @@ for repetitions in range(10):
     planner.state = 0
 
     for iteration in trange(N_ITER): #TODO: N_ITER=2000, numero di partite che durano 100 step 
+        rendering = False
 
         initial_obs=env.reset() #initial obs is a 12 dimensional obj with puck and EE initial pos and vel 
         agent.reset()
@@ -223,12 +241,11 @@ for repetitions in range(10):
 
         ######### AWAKE PHASE ########## during the awale phase the TWO networks interact with the environment
 
-        for skip in range(20): 
+        for skip in range(1): 
             act_vec = np.zeros((par['O'],))
             act_vec = act_vec*0  #TODO: forcing the agent not to act for 20 steps?
             act_vec[0]=1 #TODO: why having a vector of 0s and then add 1?
             
-            env.render()
             _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) )  #TODO: act_vec*act_factor ? why performing this product?
             
             
@@ -246,6 +263,7 @@ for repetitions in range(10):
             PLANNER_STATES.append( planner.state_out )
             RAM_PRED.append( planner.state )
             RAM.append( ram )
+
             R += [r]
             R_PRED += [r_pred]
 
@@ -267,12 +285,12 @@ for repetitions in range(10):
         r_learn = 0
 
         while not done and frame<TIMETOT:
-
+            rendering = False
+            if iteration % 10 == 0 and iteration > 0:
+                rendering = True
+                
             frame += 1
             ram_old = ram
-            
-            env.render()
-
             action, out = agent.step_det(ram/255) 
             act_vec = np.copy(out)
 
@@ -323,6 +341,10 @@ for repetitions in range(10):
             OUT.append(out)
 
             RTOT +=r
+            if r == 1 :
+                R += [r]
+                print(R)
+                
             R += [r]
             R_PRED += [r_pred]
             DRAM_PRED.append(ds_pred)
@@ -341,11 +363,16 @@ for repetitions in range(10):
         if (iteration%1==0)&(iteration>0):
             agent.update_J(r)
 
-        if (iteration%50==0)&(iteration>0):
+        if (iteration%10==0)&(iteration>0):
 
             REWARDS_MEAN.append(np.mean(REWARDS[-50:]))
             plot_rewards(REWARDS,REWARDS_MEAN,S_agent,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = os.path.join(folder, 'rewards_dynamics_r0_initrand_aggr_ifdream_' + str(if_dream) + '.png') )
             np.save(os.path.join(folder,"rewards_" + str(repetitions) + "if_dream_" + str(if_dream) + ".npy"), REWARDS_MEAN)
+            
+            
+            plot_dynamics(REWARDS,REWARDS_MEAN,S_agent,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = os.path.join(folder, 'NetworkDynamics_ifdream_' + str(if_dream) + '_' + str(repetitions) +'.png') )
+            np.save(os.path.join(folder,"dynamics_" + str(repetitions) + "if_dream_" + str(if_dream) + ".npy"), REWARDS_MEAN)
+            
 
             MEAN_ERROR_RAM.append(np.mean(np.array(ERROR_RAM)[-50:,:],axis=0))
             MEAN_ERROR_R.append(np.mean(np.array(ERROR_R)[-50:]))
@@ -353,7 +380,7 @@ for repetitions in range(10):
             plot_dram(DRAM,DRAM_PRED,R,R_PRED,MEAN_ERROR_RAM,MEAN_ERROR_R,filename= os.path.join(folder, 'planning_dram_fit.png'))
 
         ######### DREAMING PHASE ##########
-
+        rendering = False
         plot_dream_every = 50
 
         for dream_times in range(if_dream):
