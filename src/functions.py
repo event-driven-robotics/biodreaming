@@ -52,8 +52,8 @@ def computeJointValues(robot, ee_pos_des, joint_pos_current):
 
 def define_actions(home_ee, home_joint, init_obs, robot):
       
-        pos0 = get_dummy_action_airhockey(robot, init_obs)[0]
-        pos1 = [1.2, 0, home_ee[2]]
+        pos0 = [0.6, 0, home_ee[2]]
+        pos1 = [0.9, 0, home_ee[2]]
         pos2 = [1, 0.1, home_ee[2]]
         pos3 = [1, 0.3, home_ee[2]]
         pos4= [1, -0.3, home_ee[2]]
@@ -76,15 +76,15 @@ def define_actions(home_ee, home_joint, init_obs, robot):
     
 def cat2act_airhockey(cat, init_obs, robot, frame):
     # jointValues=np.zeros(3,)
-  
-    action=np.zeros((2,3))
     home_ee=init_obs[6:9]
     home_joint_pos=get_dummy_action_airhockey(robot, init_obs)
-    jointValues = define_actions(home_ee, home_joint_pos, init_obs, robot)
-    
-    jointsOfAction = jointValues[cat]
-    joint_pos_des = np.array([jointsOfAction[0], jointsOfAction[1], jointsOfAction[2]])
-    joint_vel_des = np.array([0.35, 0.35, 0.35])
+    if frame == 1:
+        cat2act_airhockey.jointValues = define_actions(home_ee, home_joint_pos, init_obs, robot)  
+        
+    cat2act_airhockey.jointsOfAction = cat2act_airhockey.jointValues[cat]
+    joint_pos_des = np.array([cat2act_airhockey.jointsOfAction[0], cat2act_airhockey.jointsOfAction[1], cat2act_airhockey.jointsOfAction[2]])
+    # joint_pos_des = np.array([0,0,0])
+    joint_vel_des = np.array([0, 0, 0])
         
     return np.vstack((joint_pos_des, joint_vel_des))
         
@@ -211,6 +211,37 @@ def plot_rewards (REWARDS,REWARDS_MEAN,S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filen
     plt.plot(np.array(RAM)[:,1])
     plt.xlabel('time')
     plt.ylabel('RAM 1')
+
+    plt.savefig(filename)
+    plt.close()
+    return
+
+
+
+def plot_dynamics(REWARDS,REWARDS_MEAN,S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = 'figure.png'):
+
+    plt.figure(figsize=( 18, 18 ) )
+
+    plt.subplot(221)
+    plt.plot(REWARDS)
+    plt.ylabel('reward')
+    plt.xlabel('iterations')
+
+    plt.subplot(222)
+    plt.plot(R)
+    plt.plot(R_PRED)
+    plt.ylabel('reward')
+    plt.xlabel('time')
+
+    plt.subplot(223)
+    plt.imshow(1-np.array(S)[:,0:40].T,aspect='auto',cmap ='gray')
+
+    plt.subplot(224)
+    plt.plot(np.array(OUT))
+    plt.ylim(-.1,1.1)
+    plt.xlabel('time')
+    plt.ylabel('policy')
+
 
     plt.savefig(filename)
     plt.close()
