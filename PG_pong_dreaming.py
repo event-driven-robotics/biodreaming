@@ -8,6 +8,9 @@ import os
 import gym
 import os.path
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot
 import matplotlib.pyplot as plt
 from datetime import datetime
 from tqdm import trange
@@ -96,7 +99,7 @@ def env_step(env, action):
 
 for repetitions in range(10):
 
-    N_ITER =   50*40                                 #50*40
+    N_ITER =   6999                                #50*40
     TIMETOT = 100
 
     if par_inp['env'] == 'pong':
@@ -286,8 +289,8 @@ for repetitions in range(10):
 
         while not done and frame<TIMETOT:
             rendering = False
-            if iteration % 10 == 0 and iteration > 0:
-                rendering = True
+            # if iteration % 100 == 0 and iteration > 0:
+            #     rendering = True
                 
             frame += 1
             ram_old = ram
@@ -308,12 +311,11 @@ for repetitions in range(10):
             planner_spikes = planner.S[:]
             agent_spikes = agent.S[:]
             
-            if iteration % 200 == 0:
-                planner_spike_printer(planner_spikes, folder, iteration)
-                agent_spike_printer(agent_spikes, folder, iteration)
+            # if iteration % 200 == 0:
+            #     planner_spike_printer(planner_spikes, folder, iteration)
+            #     agent_spike_printer(agent_spikes, folder, iteration)
 
             
-            # ram, r, done = env_step(env, get_dummy_action(robot, initial_obs))
             ram, r, done = env_step(env, cat2act(action, initial_obs, robot, frame))
             
             if_learn=0
@@ -341,9 +343,6 @@ for repetitions in range(10):
             OUT.append(out)
 
             RTOT +=r
-            if r == 1 :
-                R += [r]
-                print(R)
                 
             R += [r]
             R_PRED += [r_pred]
@@ -369,8 +368,7 @@ for repetitions in range(10):
             plot_rewards(REWARDS,REWARDS_MEAN,S_agent,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = os.path.join(folder, 'rewards_dynamics_r0_initrand_aggr_ifdream_' + str(if_dream) + '.png') )
             np.save(os.path.join(folder,"rewards_" + str(repetitions) + "if_dream_" + str(if_dream) + ".npy"), REWARDS_MEAN)
             
-            
-            plot_dynamics(REWARDS,REWARDS_MEAN,S_agent,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = os.path.join(folder, 'NetworkDynamics_ifdream_' + str(if_dream) + '_' + str(repetitions) +'.png') )
+            plot_dynamics(REWARDS,REWARDS_MEAN, S_agent,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = os.path.join(folder, 'NetworkDynamics_ifdream_' + str(if_dream) + '_' + str(repetitions) +'.png') )
             np.save(os.path.join(folder,"dynamics_" + str(repetitions) + "if_dream_" + str(if_dream) + ".npy"), REWARDS_MEAN)
             
 

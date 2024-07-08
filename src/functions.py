@@ -218,29 +218,46 @@ def plot_rewards (REWARDS,REWARDS_MEAN,S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filen
 
 
 
-def plot_dynamics(REWARDS,REWARDS_MEAN,S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = 'figure.png'):
+def plot_dynamics(REWARDS, REWARDS_MEAN, S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = 'figure.png'):
 
-    plt.figure(figsize=( 18, 18 ) )
+    plt.figure(figsize=( 25, 18 ) )
 
-    plt.subplot(221)
-    plt.plot(REWARDS)
-    plt.ylabel('reward')
+    plt.subplot(321)
+    plt.plot(REWARDS, linewidth=1, alpha=0.50, color='slateblue', label='Rewards')
+    
+    mov_avg_window = 35
+    REWARDS_AVG_MEAN = np.convolve(REWARDS, np.ones(mov_avg_window), mode='same') / mov_avg_window
+    plt.plot(REWARDS_AVG_MEAN, linewidth=2.5, color='darkslateblue', label='Moving average of the rewards')
+    plt.title('Rewards and Moving Average')
     plt.xlabel('iterations')
-
-    plt.subplot(222)
-    plt.plot(R)
-    plt.plot(R_PRED)
     plt.ylabel('reward')
-    plt.xlabel('time')
+    plt.legend()
 
-    plt.subplot(223)
-    plt.imshow(1-np.array(S)[:,0:40].T,aspect='auto',cmap ='gray')
+    plt.subplot(322)
+    plt.title('Neurons spikes')
+    plt.imshow(1-np.array(S)[:,0:40].T,aspect='auto', cmap = plt.get_cmap('tab20b'))
 
-    plt.subplot(224)
-    plt.plot(np.array(OUT))
-    plt.ylim(-.1,1.1)
-    plt.xlabel('time')
-    plt.ylabel('policy')
+    plt.subplot(323)
+    plt.plot(ENTROPY, linewidth=2, color='darkcyan')
+    plt.ylabel('entropy')
+    plt.xlabel('iterations')
+    plt.title('System entropy')
+
+    plt.subplot(324)
+    OUT = np.array(OUT)
+    plt.plot(OUT[:, 0], linewidth=2, color='crimson', label='Action 0')
+    plt.plot(OUT[:, 1], linewidth=2, color='royalblue', label='Action 1')
+    plt.ylim(-0.1, 1.1)
+    plt.xlabel('Time')
+    plt.ylabel('Probability of Choosing the Action')
+    plt.title('Probability of Choosing the Actions')
+    plt.legend()
+
+    plt.subplot(325)
+    plt.plot(REWARDS_MEAN, linewidth=2, color='hotpink')
+    plt.ylabel('Rewards mean')
+    plt.xlabel('iterations')
+    plt.title('Rewards mean')
 
 
     plt.savefig(filename)
