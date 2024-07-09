@@ -84,7 +84,7 @@ def cat2act_airhockey(cat, init_obs, robot, frame):
     cat2act_airhockey.jointsOfAction = cat2act_airhockey.jointValues[cat]
     joint_pos_des = np.array([cat2act_airhockey.jointsOfAction[0], cat2act_airhockey.jointsOfAction[1], cat2act_airhockey.jointsOfAction[2]])
     # joint_pos_des = np.array([0,0,0])
-    joint_vel_des = np.array([0, 0, 0])
+    joint_vel_des = np.array([0.2, 0.2, 0.2])
         
     return np.vstack((joint_pos_des, joint_vel_des))
         
@@ -226,7 +226,7 @@ def plot_dynamics(REWARDS, REWARDS_MEAN, S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,fil
     plt.plot(REWARDS, linewidth=1, alpha=0.50, color='slateblue', label='Rewards')
     
     mov_avg_window = 35
-    REWARDS_AVG_MEAN = np.convolve(REWARDS, np.ones(mov_avg_window), mode='same') / mov_avg_window
+    REWARDS_AVG_MEAN = np.convolve(REWARDS, np.ones(mov_avg_window), mode='valid') / mov_avg_window
     plt.plot(REWARDS_AVG_MEAN, linewidth=2.5, color='darkslateblue', label='Moving average of the rewards')
     plt.title('Rewards and Moving Average')
     plt.xlabel('iterations')

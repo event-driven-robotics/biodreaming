@@ -99,7 +99,7 @@ def env_step(env, action):
 
 for repetitions in range(10):
 
-    N_ITER =   6999                                #50*40
+    N_ITER =   10000                                #50*40
     TIMETOT = 100
 
     if par_inp['env'] == 'pong':

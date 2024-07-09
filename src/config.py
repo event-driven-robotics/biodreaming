@@ -252,8 +252,8 @@ AIRHOCKEY = {'dt' : dt,
        'sigma_Jrec' : 0.0,
        'sigma_Jout' : 0.001,
 
-       'alpha' :0.001, # 0.1*10*.5*.5*.5
-       'alpha_rout' : 0.001,#0.01*.5*.5*.5,
+       'alpha' :0.1, # 0.1*10*.5*.5*.5
+       'alpha_rout' : 0.1,#0.01*.5*.5*.5,
 
 	   'sigma_input' : 10.,
        'sigma_teach' : 10.,
