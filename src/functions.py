@@ -53,7 +53,7 @@ def computeJointValues(robot, ee_pos_des, joint_pos_current):
 def define_actions(home_ee, home_joint, init_obs, robot):
       
         pos0 = [0.6, 0, home_ee[2]]
-        pos1 = [0.9, 0, home_ee[2]]
+        pos1 = [0.95, 0, home_ee[2]]
         pos2 = [1, 0.1, home_ee[2]]
         pos3 = [1, 0.3, home_ee[2]]
         pos4= [1, -0.3, home_ee[2]]
