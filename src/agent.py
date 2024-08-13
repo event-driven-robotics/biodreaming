@@ -530,8 +530,9 @@ class AGEMO:
         self.dJfilt_out = self.dJfilt_out*(1-alpha_J) + dJ_out
 
         # ! SHADY MULTIPLY BY ZERO
-        self.dJ_aggregate += (r*self.dJfilt + ch*dJ_ent*0)
-        self.dJout_aggregate += (r*self.dJfilt_out + ch*dJ_ent_out*0)
+         #dovrebbe aumentare l'entropia
+        self.dJ_aggregate += (r*self.dJfilt + ch*dJ_ent*0) 
+        self.dJout_aggregate += (r*self.dJfilt_out + ch*dJ_ent_out) #lo 0 aumenta il termine di entropia
 
     def update_J(self, r):
 
@@ -574,10 +575,11 @@ class AGEMO:
         # ! WHY THE * 10. * .5??
         out = self.Jout @ self.state_out*10.*.5
         if self.outsig:
-            #out = self._sigm(out,0.1)+0.00001
-            out = np.exp(out) / np.sum(np.exp(out))
+            # out = self._sigm(out,0.1)+0.00001
+            out = np.exp(out) / np.sum(np.exp(out)) 
         prob = out#p.exp(out) / np.sum(np.exp(out))
         self.prob = prob
+
 
         action = np.random.choice(len(out), p = prob)
         #action = random.choices( population=[0, 1, 2],weights=out,k=1)

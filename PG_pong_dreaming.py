@@ -28,13 +28,17 @@ import threading
 from time import sleep, time
 
 parser = ArgumentParser()
-parser.add_argument('-if_dream', required = False,  type = int, dest = 'if_dream', help = 'to dream or not to dream', default = 0)
+parser.add_argument('-if_dream', required = False,  type = int, dest = 'if_dream', help = 'to dream or not to dream', default = 1)
 parser.add_argument('--env', required=False,  type = str, dest = 'env', help = 'Environment to use. Options: \'pong\', \'airhockey\'. Default: \'airhockey\'', default = 'airhockey')
 par_inp = vars(parser.parse_args())
 
 if_dream = par_inp['if_dream']
+if if_dream==1:
+    Nnetworks = "Agent&Model"
+else:
+    Nnetworks = "JustAgent"
 current_time = datetime.now()
-folder_name = current_time.strftime("RUN %d-%m_%H-%M-%S")
+folder_name = current_time.strftime("RUN %d-%m_%H-%M-%S" + " " + Nnetworks)
 folder = folder_name
 
 start_learn = 1*50
@@ -201,8 +205,11 @@ for repetitions in range(10):
     agent.dJ_aggregate=0
     agent.dJout_aggregate=0
     planner.state = 0
+    
+    success_rate=[]
 
     for iteration in trange(N_ITER): #TODO: N_ITER=2000, numero di partite che durano 100 step 
+        
         rendering = False
 
         initial_obs=env.reset() #initial obs is a 12 dimensional obj with puck and EE initial pos and vel 
@@ -236,15 +243,15 @@ for repetitions in range(10):
         home_joint_pos = robot.get_joint_pos(initial_obs)
         
         ram, r, done = env_step(env, get_dummy_action(robot, initial_obs))
+
     
         ram_old = ram
-    
-
+        
 
 
         ######### AWAKE PHASE ########## during the awale phase the TWO networks interact with the environment
 
-        for skip in range(1): 
+        for skip in range(0): 
             act_vec = np.zeros((par['O'],))
             act_vec = act_vec*0  #TODO: forcing the agent not to act for 20 steps?
             act_vec[0]=1 #TODO: why having a vector of 0s and then add 1?
@@ -262,6 +269,8 @@ for repetitions in range(10):
             ram_old = ram
             
             ram, r, done = env_step(env, get_dummy_action(robot, initial_obs))
+            
+        
 
             PLANNER_STATES.append( planner.state_out )
             RAM_PRED.append( planner.state )
@@ -286,11 +295,21 @@ for repetitions in range(10):
         OUT = []
 
         r_learn = 0
+        
+        ram_list = []
+        ram_list.append((ram[0]-1.51, ram[4]))
+            
+     
+        first_elements = [x[0] for x in ram_list]
+        fifth_elements = [x[1] for x in ram_list]
+        x_axis = list(range(len(first_elements)))
 
         while not done and frame<TIMETOT:
             rendering = False
-            # if iteration % 100 == 0 and iteration > 0:
+            
+            # if iteration > 0:
             #     rendering = True
+            
                 
             frame += 1
             ram_old = ram
@@ -317,6 +336,13 @@ for repetitions in range(10):
 
             
             ram, r, done = env_step(env, cat2act(action, initial_obs, robot, frame))
+            
+            
+            ram_list.append((ram[0]-1.51, ram[4]+0.08))
+     
+            first_elements = [x[0] for x in ram_list]
+            fifth_elements = [x[1] for x in ram_list]
+            x_axis = list(range(len(first_elements)))
             
             if_learn=0
             if iteration > start_learn: #TODO: why do I wait for learning?
@@ -353,6 +379,9 @@ for repetitions in range(10):
             env.close()
         except AttributeError:
             pass
+        if iteration >0 :
+            success_rate.append(done)
+            
         REWARDS.append(RTOT)
         ENTROPY.append(entropy)
         ERROR_RAM.append(np.std(np.array(DRAM)-np.array(DRAM_PRED),axis=0))
@@ -364,11 +393,12 @@ for repetitions in range(10):
 
         if (iteration%10==0)&(iteration>0):
 
+
             REWARDS_MEAN.append(np.mean(REWARDS[-50:]))
-            plot_rewards(REWARDS,REWARDS_MEAN,S_agent,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = os.path.join(folder, 'rewards_dynamics_r0_initrand_aggr_ifdream_' + str(if_dream) + '.png') )
+            plot_rewards(REWARDS,REWARDS_MEAN,S_agent,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = os.path.join(folder, 'rewards_dynamics_r0_initrand_aggr_ifdream_' + str(if_dream) + '.png'))
             np.save(os.path.join(folder,"rewards_" + str(repetitions) + "if_dream_" + str(if_dream) + ".npy"), REWARDS_MEAN)
             
-            plot_dynamics(REWARDS,REWARDS_MEAN, S_agent,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = os.path.join(folder, 'NetworkDynamics_ifdream_' + str(if_dream) + '_' + str(repetitions) +'.png') )
+            plot_dynamics(success_rate, x_axis, first_elements, fifth_elements, REWARDS,REWARDS_MEAN, S_agent,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = os.path.join(folder, 'NetworkDynamics_ifdream_' + str(if_dream) + '_' + str(repetitions) +'.png'))
             np.save(os.path.join(folder,"dynamics_" + str(repetitions) + "if_dream_" + str(if_dream) + ".npy"), REWARDS_MEAN)
             
 
@@ -391,15 +421,16 @@ for repetitions in range(10):
             env.reset()
             agent.reset()
             planner.reset()
-
-            ram_all, r, done, _, _ = env.step (0)
-            ram = import_ram(ram_all)
-            t_skip = 20
+            action = 0
+            ram, r, done = env_step(env, cat2act(action, initial_obs, robot, frame))
+     
+            t_skip = 1
 
             for skip in range(t_skip):
-
-                ram_all, r, done, _, _ = env.step (0)
-                RAM_PLAN.append(ram_all[[49, 50, 51, 54]])
+                
+                action = 0
+                ram, r, done = env_step(env, cat2act(action, initial_obs, robot, frame))
+                RAM_PLAN.append(ram)
 
                 act_vec = np.copy(out)
                 act_vec = act_vec*0
@@ -407,7 +438,7 @@ for repetitions in range(10):
 
                 _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) )
                 ds_pred,r_pred = planner.prediction()
-                ram = import_ram(ram_all)
+
                 REWS_PLAN.append(r_pred)
 
                 S_planner.append(planner.S[:])

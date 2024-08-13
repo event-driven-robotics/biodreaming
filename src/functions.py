@@ -53,10 +53,10 @@ def computeJointValues(robot, ee_pos_des, joint_pos_current):
 def define_actions(home_ee, home_joint, init_obs, robot):
       
         pos0 = [0.6, 0, home_ee[2]]
-        pos1 = [0.95, 0, home_ee[2]]
+        pos1 = [1, 0, home_ee[2]]
         pos2 = [1, 0.1, home_ee[2]]
-        pos3 = [1, 0.3, home_ee[2]]
-        pos4= [1, -0.3, home_ee[2]]
+        pos3 = [0.65, 0.3, home_ee[2]]
+        pos4= [0.65, -0.3, home_ee[2]]
         # delta = 0.05
         # curr_pos=self.get_joint_pos(obs)
         # goRight = curr_pos + [0, -delta, 0]
@@ -80,11 +80,11 @@ def cat2act_airhockey(cat, init_obs, robot, frame):
     home_joint_pos=get_dummy_action_airhockey(robot, init_obs)
     if frame == 1:
         cat2act_airhockey.jointValues = define_actions(home_ee, home_joint_pos, init_obs, robot)  
-        
+ 
     cat2act_airhockey.jointsOfAction = cat2act_airhockey.jointValues[cat]
     joint_pos_des = np.array([cat2act_airhockey.jointsOfAction[0], cat2act_airhockey.jointsOfAction[1], cat2act_airhockey.jointsOfAction[2]])
     # joint_pos_des = np.array([0,0,0])
-    joint_vel_des = np.array([0.2, 0.2, 0.2])
+    joint_vel_des = np.array([0, 0, 0])
         
     return np.vstack((joint_pos_des, joint_vel_des))
         
@@ -218,7 +218,7 @@ def plot_rewards (REWARDS,REWARDS_MEAN,S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filen
 
 
 
-def plot_dynamics(REWARDS, REWARDS_MEAN, S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = 'figure.png'):
+def plot_dynamics(success_rate, x_axis, first_elements, fifth_elements,REWARDS, REWARDS_MEAN, S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,filename = 'figure.png'):
 
     plt.figure(figsize=( 25, 18 ) )
 
@@ -247,17 +247,40 @@ def plot_dynamics(REWARDS, REWARDS_MEAN, S,OUT,RAM,RAM_PRED,R,R_PRED,ENTROPY,fil
     OUT = np.array(OUT)
     plt.plot(OUT[:, 0], linewidth=2, color='crimson', label='Action 0')
     plt.plot(OUT[:, 1], linewidth=2, color='royalblue', label='Action 1')
-    plt.ylim(-0.1, 1.1)
     plt.xlabel('Time')
     plt.ylabel('Probability of Choosing the Action')
     plt.title('Probability of Choosing the Actions')
     plt.legend()
 
     plt.subplot(325)
-    plt.plot(REWARDS_MEAN, linewidth=2, color='hotpink')
-    plt.ylabel('Rewards mean')
-    plt.xlabel('iterations')
-    plt.title('Rewards mean')
+    
+    slot_medie = [np.mean(success_rate[j:j+10]) for j in range(0, len(success_rate), 10)]
+
+    x_values = list(range(1, len(slot_medie)+1))
+    plt.plot(x_values, slot_medie, marker='o')
+    
+    last_10 = np.mean(success_rate[-10:])
+
+    # Aggiungi la scritta nel plot
+    plt.text(len(slot_medie) - 1, slot_medie[-1], f' {last_10:.2f}', 
+         fontsize=18)
+    plt.xlim(0, len(slot_medie)+2)
+    plt.xlabel('10 experiments slot number')
+    plt.ylabel('Mean success rate')
+    plt.title('Mean of the success rate for 10 experiments slots')
+
+
+    
+    plt.subplot(326)
+
+    plt.plot(x_axis, first_elements, label='Puck trajectory')
+    plt.plot(x_axis, fifth_elements, label='End Effector trajectory')
+
+    plt.xlabel('Time')
+    plt.ylabel('Trajectories [m]')
+    plt.title('EndEffector and Puck trajectory')
+
+        
 
 
     plt.savefig(filename)
