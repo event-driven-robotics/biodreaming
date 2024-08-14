@@ -265,6 +265,7 @@ def plot_dynamics(success_rate, x_axis, first_elements, fifth_elements,REWARDS, 
     plt.text(len(slot_medie) - 1, slot_medie[-1], f' {last_10:.2f}', 
          fontsize=18)
     plt.xlim(0, len(slot_medie)+2)
+    plt.ylim(-0.1, 1.1)
     plt.xlabel('10 experiments slot number')
     plt.ylabel('Mean success rate')
     plt.title('Mean of the success rate for 10 experiments slots')
