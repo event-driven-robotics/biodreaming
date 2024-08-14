@@ -513,7 +513,7 @@ class AGEMO:
 
     def learn_error (self, r):
         # ! WHAT IS THIS CH?
-        ch = 2
+        ch = 0.5
 
         alpha_J = 0.002
         ac_vector = np.zeros((self.O,))
