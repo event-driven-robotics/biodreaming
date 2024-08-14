@@ -337,6 +337,8 @@ for repetitions in range(10):
             
             ram, r, done = env_step(env, cat2act(action, initial_obs, robot, frame))
             
+            if done == True and frame < TIMETOT:
+                r = 1
             
             ram_list.append((ram[0]-1.51, ram[4]+0.08))
      
@@ -371,6 +373,12 @@ for repetitions in range(10):
             RTOT +=r
                 
             R += [r]
+            
+            #TODO: sistemare, orribile
+            if done == True and frame < TIMETOT:
+                R[-1]=1
+                
+                
             R_PRED += [r_pred]
             DRAM_PRED.append(ds_pred)
             DRAM.append(dram)
