@@ -103,7 +103,7 @@ def env_step(env, action):
 
 for repetitions in range(10):
 
-    N_ITER =   10000                                #50*40
+    N_ITER =   1000                                #50*40
     TIMETOT = 100
 
     if par_inp['env'] == 'pong':
@@ -307,7 +307,7 @@ for repetitions in range(10):
         while not done and frame<TIMETOT:
             rendering = False
             
-            # if iteration > 0:
+            # if iteration > 200:
             #     rendering = True
             
                 

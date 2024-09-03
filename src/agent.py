@@ -530,7 +530,6 @@ class AGEMO:
         self.dJfilt_out = self.dJfilt_out*(1-alpha_J) + dJ_out
 
         # ! SHADY MULTIPLY BY ZERO
-         #dovrebbe aumentare l'entropia
         self.dJ_aggregate += (r*self.dJfilt + ch*dJ_ent*0) 
         self.dJout_aggregate += (r*self.dJfilt_out + ch*dJ_ent_out) #lo 0 aumenta il termine di entropia
 
