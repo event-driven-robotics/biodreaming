@@ -572,6 +572,11 @@ class AGEMO:
         self.state_out = self.state_out * self.itau_ro  + state * (1 - self.itau_ro)
 
         # ! WHY THE * 10. * .5??
+        if np.isnan(self.Jout).any() :
+            print("nan detected")
+            
+        # self.Jout[np.isnan(self.Jout)] = 0.000001
+
         out = self.Jout @ self.state_out*10.*.5
         if self.outsig:
             # out = self._sigm(out,0.1)+0.00001
