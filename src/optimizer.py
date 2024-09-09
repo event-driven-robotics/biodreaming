@@ -36,7 +36,7 @@ class Adam:
         #if step_time:
 
 
-        return theta_t + self.alpha * m_hat / (np.sqrt (v_hat) + self.epsilon)
+        return theta_t - self.alpha * m_hat / (np.sqrt (v_hat) + self.epsilon)
 
     # This is the Adam optimization
     def optimize (self, grad, *args, init = 0., t_max = 1000):
