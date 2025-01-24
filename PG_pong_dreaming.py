@@ -5,9 +5,11 @@
 """
 
 import os
+from pytictoc import TicToc
 import gym
 import os.path
 import numpy as np
+import scipy.stats as stats
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot
@@ -90,12 +92,13 @@ def planner_spike_printer(spike_train, folder, iteration):
     plt.close()
 
 def env_step(env, action):
+    
     try:
         ram_all, r, done, _, _ = env.step (action) 
         
     except ValueError:
-        ram_all, r, done, _ = env.step (action) 
-    # print(env.base_env.get_joints(ram_all))      
+          ram_all, r, done, _ = env.step (action) 
+      
     ram = import_ram(ram_all)
     return ram, r, done
 
@@ -103,7 +106,7 @@ def env_step(env, action):
 
 for repetitions in range(10):
 
-    N_ITER =   1000                                #50*40
+    N_ITER =  1000                                #50*40
     TIMETOT = 100
 
     if par_inp['env'] == 'pong':
@@ -135,8 +138,6 @@ for repetitions in range(10):
                 
     threading.Thread(target=render_thread).start()
 
-    # print (f'Pong: Observation space: {env.observation_space}')
-    # print (f'Pong: Action Meaning: {env.unwrapped.get_action_meanings()}')
 
 
     plt.rcParams.update({'font.size': 14})
@@ -249,12 +250,12 @@ for repetitions in range(10):
         
 
 
-        ######### AWAKE PHASE ########## during the awale phase the TWO networks interact with the environment
+        ######### AWAKE PHASE ########## during the awake phase the TWO networks interact with the environment
 
         for skip in range(0): 
             act_vec = np.zeros((par['O'],))
-            act_vec = act_vec*0  #TODO: forcing the agent not to act for 20 steps?
-            act_vec[0]=1 #TODO: why having a vector of 0s and then add 1?
+            act_vec = act_vec*0  
+            act_vec[0]=1 
             
             _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) )  #TODO: act_vec*act_factor ? why performing this product?
             
@@ -293,6 +294,8 @@ for repetitions in range(10):
         entropy=0
 
         OUT = []
+        
+        network_time = []
 
         r_learn = 0
         
@@ -307,19 +310,25 @@ for repetitions in range(10):
         while not done and frame<TIMETOT:
             rendering = False
             
-            # if iteration > 200:
+            # if iteration > 2:
             #     rendering = True
             
                 
             frame += 1
             ram_old = ram
+            
+            t = TicToc() #create instance of class
+
+            t.tic() #Start timer
             action, out = agent.step_det(ram/255) 
+            network_time += [t.tocvalue()]
+            
             act_vec = np.copy(out)
 
             act_vec = act_vec*0
             act_vec[action]=1
 
-            _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) ) #TODO: why does the step of the planner needs two inputs ?
+            _, _ =  planner.step_det( np.concatenate((act_vec*act_factor, ram/255), axis=0) ) 
             ds_pred,r_pred = planner.prediction()
 
             PLANNER_STATES.append( planner.state_out )
@@ -337,7 +346,7 @@ for repetitions in range(10):
             
             ram, r, done = env_step(env, cat2act(action, initial_obs, robot, frame))
             
-            if done == True and frame < TIMETOT:
+            if done == True and frame < TIMETOT -1 :
                 r = 1
             
             ram_list.append((ram[0]-1.51, ram[4]+0.08))
@@ -375,13 +384,38 @@ for repetitions in range(10):
             R += [r]
             
             #TODO: sistemare, orribile
-            if done == True and frame < TIMETOT:
+            if done == True and frame < TIMETOT -1 :
                 R[-1]=1
                 
                 
             R_PRED += [r_pred]
             DRAM_PRED.append(ds_pred)
             DRAM.append(dram)
+            
+        if iteration % 50 == 0:   
+            
+            file_name = f'network_time_plot_{iteration}.png'
+            file_path = os.path.join(folder_name, file_name)
+
+            iter_number = range(len(network_time))    
+            plt.figure(figsize=(10, 6))
+            plt.plot(iter_number, network_time, marker='o', linestyle='-', color='b', label='Network Time')
+            
+            mean = np.mean(network_time)
+            variance = np.var(network_time)
+            std_dev = np.sqrt(variance)  # Deviazione standard
+            textstr = f'Mean: {mean:.10f}\nStd Dev: {std_dev:.10f}'
+            plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes,
+                    fontsize=12, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
+
+            plt.xlabel('Iteration')
+            plt.ylabel('Network Time (s)')
+            plt.title('Network Time')
+            plt.legend()
+            
+            plt.grid(True)
+            plt.savefig(file_path)
+
 
         try:
             env.close()
