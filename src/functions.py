@@ -51,12 +51,17 @@ def computeJointValues(robot, ee_pos_des, joint_pos_current):
 
 
 def define_actions(home_ee, home_joint, init_obs, robot):
-      
+    
+        if init_obs[1] > 0:
+            init_obs[1] +=0.2
+        elif init_obs[1] < 0:
+            init_obs[1] -=0.2   
+                  
         pos0 = [0.6, 0, home_ee[2]]
         pos1 = [1, 0, home_ee[2]]
         pos2 = [1, 0.1, home_ee[2]]
-        pos3 = [0.65, 0.3, home_ee[2]]
-        pos4= [0.65, -0.3, home_ee[2]]
+        pos3 = [0.9, 0.25, home_ee[2]]
+        pos4= [0.9, -0.25, home_ee[2]]
         # delta = 0.05
         # curr_pos=self.get_joint_pos(obs)
         # goRight = curr_pos + [0, -delta, 0]
@@ -78,6 +83,7 @@ def cat2act_airhockey(cat, init_obs, robot, frame):
     # jointValues=np.zeros(3,)
     home_ee=init_obs[6:9]
     home_joint_pos=get_dummy_action_airhockey(robot, init_obs)
+    # if frame == 1:
     if frame == 1:
         cat2act_airhockey.jointValues = define_actions(home_ee, home_joint_pos, init_obs, robot)  
  
