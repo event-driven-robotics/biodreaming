@@ -35,7 +35,7 @@ parser.add_argument('--env', required=False,  type = str, dest = 'env', help = '
 par_inp = vars(parser.parse_args())
 
 if_dream = par_inp['if_dream']
-if if_dream==1:
+if if_dream==1:  
     Nnetworks = "Agent&Model"
 else:
     Nnetworks = "JustAgent"
@@ -140,7 +140,7 @@ for repetitions in range(10):
 
 
 
-    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'font.size': 18})
 
     train_par = {'epochs'    : par['epochs'],
                  'epochs_out' : par['epochs_out'],
@@ -310,7 +310,7 @@ for repetitions in range(10):
         while not done and frame<TIMETOT:
             rendering = False
             
-            # if iteration > 2:
+            # if iteration % 2000:
             #     rendering = True
             
                 
@@ -346,8 +346,11 @@ for repetitions in range(10):
             
             ram, r, done = env_step(env, cat2act(action, initial_obs, robot, frame))
             
-            if done == True and frame < TIMETOT -1 :
-                r = 1
+            if action == 0:
+                r = 10/frame
+                
+            if done == True and frame < TIMETOT-1 :
+                r = 2500
             
             ram_list.append((ram[0]-1.51, ram[4]+0.08))
      
@@ -384,37 +387,38 @@ for repetitions in range(10):
             R += [r]
             
             #TODO: sistemare, orribile
-            if done == True and frame < TIMETOT -1 :
-                R[-1]=1
+            if done == True and frame < TIMETOT-1  :
+                R[-1]=2500
+                print(R)
                 
                 
             R_PRED += [r_pred]
             DRAM_PRED.append(ds_pred)
             DRAM.append(dram)
             
-        if iteration % 50 == 0:   
+        # if iteration % 50 == 0:   
             
-            file_name = f'network_time_plot_{iteration}.png'
-            file_path = os.path.join(folder_name, file_name)
+        #     file_name = f'network_time_plot_{iteration}.png'
+        #     file_path = os.path.join(folder_name, file_name)
 
-            iter_number = range(len(network_time))    
-            plt.figure(figsize=(10, 6))
-            plt.plot(iter_number, network_time, marker='o', linestyle='-', color='b', label='Network Time')
+        #     iter_number = range(len(network_time))    
+        #     plt.figure(figsize=(10, 6))
+        #     plt.plot(iter_number, network_time, marker='o', linestyle='-', color='b', label='Network Time')
             
-            mean = np.mean(network_time)
-            variance = np.var(network_time)
-            std_dev = np.sqrt(variance)  # Deviazione standard
-            textstr = f'Mean: {mean:.10f}\nStd Dev: {std_dev:.10f}'
-            plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes,
-                    fontsize=12, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
+        #     mean = np.mean(network_time)
+        #     variance = np.var(network_time)
+        #     std_dev = np.sqrt(variance)  # Deviazione standard
+        #     textstr = f'Mean: {mean:.10f}\nStd Dev: {std_dev:.10f}'
+        #     plt.text(0.05, 0.95, textstr, transform=plt.gca().transAxes,
+        #             fontsize=12, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
 
-            plt.xlabel('Iteration')
-            plt.ylabel('Network Time (s)')
-            plt.title('Network Time')
-            plt.legend()
+        #     plt.xlabel('Iteration')
+        #     plt.ylabel('Network Time (s)')
+        #     plt.title('Network Time')
+        #     plt.legend()
             
-            plt.grid(True)
-            plt.savefig(file_path)
+        #     plt.grid(True)
+        #     plt.savefig(file_path)
 
 
         try:

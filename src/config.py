@@ -242,7 +242,7 @@ AIRHOCKEY = {'dt' : dt,
        'tau_ro' : 1*dt,
        'tau_star' : dt,
 
-    	'N' : 2000, 'T' : 800, 'I' : 6, 'O' : 2,
+    	'N' : 500, 'T' : 800, 'I' : 6, 'O' : 2,
 
 	'dv' : 0.05 , 'Vo' : -0.03, 'h' : -0.05, 's_inh' : 100,   #'Vo' : -0.02, 'h' : -0.04
 
@@ -252,7 +252,7 @@ AIRHOCKEY = {'dt' : dt,
        'sigma_Jrec' : 0.0,
        'sigma_Jout' : 0.001,
 
-       'alpha' :0.1, # 0.1*10*.5*.5*.5
+       'alpha' :0.1, # 0.5
        'alpha_rout' : 0.1,#0.01*.5*.5*.5,
 
 	   'sigma_input' : 10.,
